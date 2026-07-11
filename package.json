@@ -7,7 +7,7 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "sqlite3": "^6.0.1"
+    "sqlite3": "^6.0.1",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.6",
     "dotenv": "^16.6.1",

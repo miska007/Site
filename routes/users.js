@@ -53,6 +53,25 @@ router.post('/me/avatar', auth, upload.single('avatar'), async (req, res) => {
   res.json({ avatar: url });
 });
 
+// ── Смена пароля ────────────────────────────────────────────────────────────
+router.patch('/me/password', auth, rateLimit('change_password', 5, 15 * 60_000), async (req, res) => {
+  try {
+    const { old_password, new_password } = req.body;
+    if (!old_password || !new_password)
+      return res.status(400).json({ error: 'Заполни все поля' });
+    if (new_password.length < 6)
+      return res.status(400).json({ error: 'Новый пароль: минимум 6 символов' });
+
+    const row = await get('SELECT password FROM users WHERE id=?', [req.user.id]);
+    const ok = await require('bcryptjs').compare(old_password, row.password);
+    if (!ok) return res.status(401).json({ error: 'Старый пароль неверен' });
+
+    const hash = await require('bcryptjs').hash(new_password, 10);
+    await run('UPDATE users SET password=? WHERE id=?', [hash, req.user.id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ── Отсроченное удаление аккаунта (мин. 14 дней) ───────────────────────────
 const DELETION_DAYS = 14;
 

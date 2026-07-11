@@ -84,7 +84,8 @@ const ProfilePage = (() => {
                     <svg viewBox="0 0 24 24"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
                     Написать
                   </button>` : ''}
-                  ${isMe ? `<button class="btn-secondary" onclick="ProfilePage.showEditModal()">Редактировать</button>` : ''}
+                  ${isMe ? `<button class="btn-secondary" onclick="ProfilePage.showEditModal()">Редактировать</button>
+                  <button class="btn-secondary" onclick="ProfilePage.showPasswordModal()">Сменить пароль</button>` : ''}
                 </div>
               </div>
             </div>
@@ -133,6 +134,38 @@ const ProfilePage = (() => {
           <button class="btn-secondary" onclick="App.closeModal()">Отмена</button>
           <button class="btn-primary" onclick="ProfilePage.saveEdit()">Сохранить</button>
         </div>`);
+    },
+
+    showPasswordModal() {
+      App.openModal(`
+        <div class="modal-title">Сменить пароль</div>
+        <div class="field"><label>Старый пароль</label><input id="pw-old" type="password" placeholder="Текущий пароль" autocomplete="current-password"></div>
+        <div class="field"><label>Новый пароль</label><input id="pw-new" type="password" placeholder="Минимум 6 символов" autocomplete="new-password"></div>
+        <div class="field"><label>Повторите новый пароль</label><input id="pw-confirm" type="password" placeholder="Повторите новый пароль" autocomplete="new-password"></div>
+        <div id="pw-error" class="error-msg hidden"></div>
+        <div class="modal-actions">
+          <button class="btn-secondary" onclick="App.closeModal()">Отмена</button>
+          <button class="btn-primary" onclick="ProfilePage.savePassword()">Сохранить</button>
+        </div>`);
+    },
+
+    async savePassword() {
+      const old_password = document.getElementById('pw-old')?.value;
+      const new_password = document.getElementById('pw-new')?.value;
+      const confirm      = document.getElementById('pw-confirm')?.value;
+      const errEl        = document.getElementById('pw-error');
+
+      const setErr = (msg) => { if (errEl) { errEl.textContent = msg; errEl.classList.remove('hidden'); } };
+
+      if (!old_password || !new_password || !confirm) return setErr('Заполни все поля');
+      if (new_password !== confirm) return setErr('Новые пароли не совпадают');
+      if (new_password.length < 6)  return setErr('Новый пароль: минимум 6 символов');
+
+      try {
+        await API.changePassword({ old_password, new_password });
+        App.closeModal();
+        App.toast('Пароль успешно изменён');
+      } catch(e) { setErr(e.message); }
     },
 
     async saveEdit() {

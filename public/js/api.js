@@ -37,6 +37,7 @@ const API = (() => {
     me:           ()  => req('GET',   '/users/me'),
     getUser:      (u) => req('GET',   `/users/${u}`),
     updateMe:     (b) => req('PATCH', '/users/me', b),
+    changePassword: (b) => req('PATCH', '/users/me/password', b),
     uploadAvatar: (f) => { const fd = new FormData(); fd.append('avatar', f); return upload('POST', '/users/me/avatar', fd); },
     searchUsers:  (q) => req('GET',   `/users/search/users?q=${encodeURIComponent(q)}`),
 

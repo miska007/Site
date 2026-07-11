@@ -228,6 +228,22 @@ const App = (() => {
     openModal(`<img src="${escHtml(src)}" style="max-width:100%;max-height:80vh;display:block;border-radius:4px" alt="">`);
   };
 
+  // ── User dropdown menu ─────────────────────────────────────────────────────
+  const toggleUserMenu = () => {
+    const dd = document.getElementById('user-dropdown');
+    if (!dd) return;
+    dd.classList.toggle('hidden');
+  };
+
+  const closeUserMenu = () => {
+    document.getElementById('user-dropdown')?.classList.add('hidden');
+  };
+
+  // Закрыть при клике вне меню
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#user-menu-wrap')) closeUserMenu();
+  });
+
   // ── Logout ─────────────────────────────────────────────────────────────────
   const logout = () => {
     localStorage.removeItem('sn_token');
@@ -251,6 +267,14 @@ const App = (() => {
 
     const avatarImg = document.getElementById('my-avatar-img');
     if (avatarImg && _me.avatar) avatarImg.src = _me.avatar;
+
+    // Заполнить дропдаун
+    const ddAvatar = document.getElementById('user-dropdown-avatar');
+    const ddDname  = document.getElementById('user-dropdown-dname');
+    const ddUname  = document.getElementById('user-dropdown-uname');
+    if (ddAvatar) ddAvatar.src = _me.avatar || '/img/default-avatar.svg';
+    if (ddDname)  ddDname.textContent  = _me.display_name || _me.username;
+    if (ddUname)  ddUname.textContent  = '@' + _me.username;
 
     // Show admin button if admin
     const adminBtn = document.getElementById('nav-admin');
@@ -310,5 +334,7 @@ const App = (() => {
     applyCssVars,
     reloadSounds: loadSounds,
     playSound,
+    toggleUserMenu,
+    closeUserMenu,
   };
 })();

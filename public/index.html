@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SocialNet</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen" class="auth-screen hidden">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <span class="logo-icon">◈</span>
+      <span class="logo-text">SocialNet</span>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="login-form">
+      <h2>С возвращением!</h2>
+      <p class="auth-sub">Рады снова тебя видеть</p>
+      <div class="field">
+        <label>Логин или email</label>
+        <input type="text" id="login-login" placeholder="username или email" autocomplete="username">
+      </div>
+      <div class="field">
+        <label>Пароль</label>
+        <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <div id="login-error" class="form-error hidden"></div>
+      <button class="btn-primary btn-full" onclick="App.doLogin()">Войти</button>
+      <p class="auth-switch">Нет аккаунта? <a href="#" onclick="App.showRegister()">Зарегистрироваться</a></p>
+    </div>
+
+    <!-- REGISTER -->
+    <div id="register-form" class="hidden">
+      <h2>Создать аккаунт</h2>
+      <div class="field">
+        <label>Имя для отображения</label>
+        <input type="text" id="reg-displayname" placeholder="Твоё имя">
+      </div>
+      <div class="field">
+        <label>Логин</label>
+        <input type="text" id="reg-username" placeholder="только латиница, цифры, _">
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="reg-email" placeholder="example@mail.com" autocomplete="email">
+      </div>
+      <div class="field">
+        <label>Пароль</label>
+        <input type="password" id="reg-password" placeholder="минимум 6 символов" autocomplete="new-password">
+      </div>
+      <div id="reg-error" class="form-error hidden"></div>
+      <button class="btn-primary btn-full" onclick="App.doRegister()">Зарегистрироваться</button>
+      <p class="auth-switch">Уже есть аккаунт? <a href="#" onclick="App.showLogin()">Войти</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app" class="app hidden">
+
+  <!-- LEFT SIDEBAR -->
+  <nav class="sidebar-left">
+    <div class="sidebar-logo" onclick="App.nav('feed')">
+      <span class="logo-icon">◈</span>
+    </div>
+    <div class="nav-items">
+      <button class="nav-btn active" id="nav-feed"     onclick="App.nav('feed')"     title="Лента">
+        <svg viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+      </button>
+      <button class="nav-btn" id="nav-groups"   onclick="App.nav('groups')"   title="Сообщества">
+        <svg viewBox="0 0 24 24"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+      </button>
+      <button class="nav-btn" id="nav-friends"  onclick="App.nav('friends')"  title="Друзья">
+        <svg viewBox="0 0 24 24"><path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+      </button>
+      <button class="nav-btn" id="nav-messages" onclick="App.nav('messages')" title="Сообщения">
+        <svg viewBox="0 0 24 24"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+        <span class="badge hidden" id="msg-badge"></span>
+      </button>
+    </div>
+    <div class="sidebar-bottom">
+      <button class="nav-btn" id="nav-notifications" onclick="App.nav('notifications')" title="Уведомления">
+        <svg viewBox="0 0 24 24"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+        <span class="badge hidden" id="notif-badge"></span>
+      </button>
+      <!-- Admin button — shown only to admins via JS -->
+      <button class="nav-btn admin-btn hidden" id="nav-admin" onclick="App.nav('admin')" title="Панель администратора">
+        <svg viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      </button>
+      <div class="avatar-mini" id="my-avatar-btn" onclick="App.navProfile()" title="Мой профиль">
+        <img id="my-avatar-img" src="/img/default-avatar.svg" alt="avatar">
+      </div>
+    </div>
+  </nav>
+
+  <!-- CONTENT AREA -->
+  <main class="content" id="content">
+    <!-- страницы рендерятся JS-ом -->
+  </main>
+
+</div>
+
+<!-- MODAL OVERLAY -->
+<div id="modal-overlay" class="modal-overlay hidden" onclick="App.closeModal()">
+  <div id="modal-box" class="modal-box" onclick="event.stopPropagation()">
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="toast hidden"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/pages/feed.js"></script>
+<script src="/js/pages/groups.js"></script>
+<script src="/js/pages/friends.js"></script>
+<script src="/js/pages/messages.js"></script>
+<script src="/js/pages/profile.js"></script>
+<script src="/js/pages/notifications.js"></script>
+<script src="/js/pages/admin.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>

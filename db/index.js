@@ -1,46 +1,59 @@
-const sqlite3 = require('sqlite3').verbose();
+const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 
 const DB_PATH = path.join(__dirname, 'socialnet.db');
 
-// Ensure uploads/sounds dir exists
-const SOUNDS_DIR = path.join(__dirname, '../public/uploads/sounds');
-if (!fs.existsSync(SOUNDS_DIR)) fs.mkdirSync(SOUNDS_DIR, { recursive: true });
+// Ensure upload dirs exist
+['../public/uploads/sounds', '../public/uploads/avatars', '../public/uploads/posts', '../public/uploads/groups']
+  .forEach(d => { const p = path.join(__dirname, d); if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true }); });
 
-const db = new sqlite3.Database(DB_PATH, (err) => {
-  if (err) { console.error('DB open error:', err); process.exit(1); }
-  console.log('SQLite connected:', DB_PATH);
-});
+const db = new Database(DB_PATH);
 
-db.run('PRAGMA journal_mode = WAL');
-db.run('PRAGMA foreign_keys = ON');
-db.run('PRAGMA cache_size = -8000');   // 8MB cache
-db.run('PRAGMA synchronous = NORMAL'); // faster, still safe with WAL
+db.pragma('journal_mode = WAL');
+db.pragma('foreign_keys = ON');
+db.pragma('cache_size = -8000');
+db.pragma('synchronous = NORMAL');
 
-// Promise helpers
-const run = (sql, params = []) => new Promise((res, rej) =>
-  db.run(sql, params, function(err) { err ? rej(err) : res({ lastID: this.lastID, changes: this.changes }); }));
+// ── Promise-compatible helpers (same API as before) ──────────────────────────
+// better-sqlite3 синхронный, оборачиваем в async для совместимости с роутами
 
-const get = (sql, params = []) => new Promise((res, rej) =>
-  db.get(sql, params, (err, row) => err ? rej(err) : res(row)));
+const run = (sql, params = []) => {
+  try {
+    const stmt = db.prepare(sql);
+    const result = stmt.run(...params);
+    return Promise.resolve({ lastID: result.lastInsertRowid, changes: result.changes });
+  } catch (e) { return Promise.reject(e); }
+};
 
-const all = (sql, params = []) => new Promise((res, rej) =>
-  db.all(sql, params, (err, rows) => err ? rej(err) : res(rows)));
+const get = (sql, params = []) => {
+  try {
+    const row = db.prepare(sql).get(...params);
+    return Promise.resolve(row ?? null);
+  } catch (e) { return Promise.reject(e); }
+};
 
-// Schema
-const schema = `
+const all = (sql, params = []) => {
+  try {
+    const rows = db.prepare(sql).all(...params);
+    return Promise.resolve(rows);
+  } catch (e) { return Promise.reject(e); }
+};
+
+// ── Schema ───────────────────────────────────────────────────────────────────
+db.exec(`
 CREATE TABLE IF NOT EXISTS users (
-  id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  username    TEXT    NOT NULL UNIQUE COLLATE NOCASE,
-  email       TEXT    NOT NULL UNIQUE COLLATE NOCASE,
-  password    TEXT    NOT NULL,
-  display_name TEXT   NOT NULL DEFAULT '',
-  avatar      TEXT    DEFAULT NULL,
-  bio         TEXT    DEFAULT '',
-  is_admin    INTEGER NOT NULL DEFAULT 0,
-  created_at  INTEGER NOT NULL DEFAULT (strftime('%s','now')),
-  last_seen   INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  username     TEXT    NOT NULL UNIQUE COLLATE NOCASE,
+  email        TEXT    NOT NULL UNIQUE COLLATE NOCASE,
+  password     TEXT    NOT NULL,
+  display_name TEXT    NOT NULL DEFAULT '',
+  avatar       TEXT    DEFAULT NULL,
+  bio          TEXT    DEFAULT '',
+  is_admin     INTEGER NOT NULL DEFAULT 0,
+  created_at   INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+  last_seen    INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+  deletion_scheduled_at INTEGER DEFAULT NULL
 );
 
 CREATE TABLE IF NOT EXISTS posts (
@@ -96,11 +109,11 @@ CREATE TABLE IF NOT EXISTS group_members (
 );
 
 CREATE TABLE IF NOT EXISTS group_invites (
-  id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  group_id    INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
-  inviter_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  invitee_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  created_at  INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  group_id   INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  inviter_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  invitee_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
   UNIQUE(group_id, invitee_id)
 );
 
@@ -130,31 +143,20 @@ CREATE TABLE IF NOT EXISTS admin_settings (
   value TEXT NOT NULL DEFAULT ''
 );
 
-CREATE INDEX IF NOT EXISTS idx_posts_user    ON posts(user_id);
-CREATE INDEX IF NOT EXISTS idx_posts_group   ON posts(group_id);
-CREATE INDEX IF NOT EXISTS idx_posts_time    ON posts(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_comments_post ON comments(post_id);
-CREATE INDEX IF NOT EXISTS idx_likes_post    ON likes(post_id);
-CREATE INDEX IF NOT EXISTS idx_friends_user  ON friends(user_id);
+CREATE INDEX IF NOT EXISTS idx_posts_user     ON posts(user_id);
+CREATE INDEX IF NOT EXISTS idx_posts_group    ON posts(group_id);
+CREATE INDEX IF NOT EXISTS idx_posts_time     ON posts(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_comments_post  ON comments(post_id);
+CREATE INDEX IF NOT EXISTS idx_likes_post     ON likes(post_id);
+CREATE INDEX IF NOT EXISTS idx_friends_user   ON friends(user_id);
 CREATE INDEX IF NOT EXISTS idx_friends_friend ON friends(friend_id);
-CREATE INDEX IF NOT EXISTS idx_msg_sender    ON messages(sender_id);
-CREATE INDEX IF NOT EXISTS idx_msg_receiver  ON messages(receiver_id);
-CREATE INDEX IF NOT EXISTS idx_notif_user    ON notifications(user_id);
-CREATE INDEX IF NOT EXISTS idx_gm_group      ON group_members(group_id);
-CREATE INDEX IF NOT EXISTS idx_gm_user       ON group_members(user_id);
-CREATE INDEX IF NOT EXISTS idx_gi_group      ON group_invites(group_id);
-CREATE INDEX IF NOT EXISTS idx_gi_invitee    ON group_invites(invitee_id);
-`;
-
-db.serialize(() => {
-  schema.split(';').map(s => s.trim()).filter(Boolean).forEach(sql => {
-    db.run(sql, err => {
-      if (err && !err.message.includes('already exists')) console.error('Schema error:', err.message);
-    });
-  });
-
-  // Migrations for existing DBs
-  db.run('ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0', () => {});
-});
+CREATE INDEX IF NOT EXISTS idx_msg_sender     ON messages(sender_id);
+CREATE INDEX IF NOT EXISTS idx_msg_receiver   ON messages(receiver_id);
+CREATE INDEX IF NOT EXISTS idx_notif_user     ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_gm_group       ON group_members(group_id);
+CREATE INDEX IF NOT EXISTS idx_gm_user        ON group_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_gi_group       ON group_invites(group_id);
+CREATE INDEX IF NOT EXISTS idx_gi_invitee     ON group_invites(invitee_id);
+`);
 
 module.exports = { db, run, get, all };

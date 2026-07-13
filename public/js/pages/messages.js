@@ -49,8 +49,11 @@ const MessagesPage = (() => {
         const dialogs = await API.getDialogs();
         el.innerHTML = dialogs.length ? dialogs.map(d => `
           <div class="dialog-item ${d.id === currentUserId ? 'active' : ''}" id="dialog-${d.id}"
-               onclick="MessagesPage.openDialog(${d.id},'${escHtml(d.display_name||d.username)}','${d.avatar||''}')">
-            <div class="avatar" style="width:38px;height:38px"><img src="${d.avatar||'/img/default-avatar.svg'}"></div>
+               onclick="MessagesPage.openDialog(${d.id},'${escHtml(d.display_name||d.username)}','${d.avatar||''}',${d.last_seen||0})">
+            <div class="avatar-wrap">
+              <div class="avatar" style="width:38px;height:38px"><img src="${d.avatar||'/img/default-avatar.svg'}"></div>
+              <span class="status-dot ${App.isOnline(d.id)?'online':''}" data-dot-id="${d.id}"></span>
+            </div>
             <div class="dialog-info">
               <div class="dialog-name">${escHtml(d.display_name||d.username)}</div>
               <div class="dialog-last">${escHtml(d.last_message||'')}</div>
@@ -61,7 +64,7 @@ const MessagesPage = (() => {
       } catch(e) { App.toast(e.message, 'error'); }
     },
 
-    async openDialog(userId, userName, avatar) {
+    async openDialog(userId, userName, avatar, lastSeen = 0) {
       currentUserId = parseInt(userId);
       currentUserName = userName;
       const me = App.me;
@@ -73,8 +76,14 @@ const MessagesPage = (() => {
       if (!chatArea) return;
       chatArea.innerHTML = `
         <div class="chat-header">
-          <div class="avatar" style="width:36px;height:36px"><img src="${avatar||'/img/default-avatar.svg'}"></div>
-          <div class="chat-name">${escHtml(userName)}</div>
+          <div class="avatar-wrap">
+            <div class="avatar" style="width:36px;height:36px"><img src="${avatar||'/img/default-avatar.svg'}"></div>
+            <span class="status-dot ${App.isOnline(userId)?'online':''}" data-dot-id="${userId}"></span>
+          </div>
+          <div>
+            <div class="chat-name">${escHtml(userName)}</div>
+            ${App.presenceHtml(userId, lastSeen)}
+          </div>
         </div>
         <div class="chat-messages" id="chat-msgs"></div>
         <div class="chat-input-area">

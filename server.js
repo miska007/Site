@@ -45,6 +45,11 @@ app.get('/api/settings', async (req, res) => {
   } catch { res.json({}); }
 });
 
+// Список онлайн-пользователей (IDs)
+app.get('/api/online', require('./middleware/auth'), (req, res) => {
+  res.json([...onlineUsers.keys()]);
+});
+
 // SPA fallback
 app.get('*', (req, res) => {
   if (!req.path.startsWith('/api') && !req.path.startsWith('/uploads'))

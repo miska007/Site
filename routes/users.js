@@ -17,7 +17,7 @@ router.get('/me', auth, (req, res) => res.json(req.user));
 router.get('/search/users', auth, rateLimit('search', 30, 60_000), async (req, res) => {
   const q = '%' + (req.query.q || '') + '%';
   const users = await all(
-    'SELECT id, username, display_name, avatar FROM users WHERE (username LIKE ? OR display_name LIKE ?) AND id!=? LIMIT 20',
+    'SELECT id, username, display_name, avatar, last_seen FROM users WHERE (username LIKE ? OR display_name LIKE ?) AND id!=? LIMIT 20',
     [q, q, req.user.id]
   );
   res.json(users);

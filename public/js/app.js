@@ -14,6 +14,7 @@ const App = (() => {
   let _badgeTimer  = null;
   let _toastTimer  = null;
   let _sounds      = {};   // type -> Audio
+  let _onlineSet   = new Set(); // IDs онлайн-пользователей
 
   // ── CSS vars (theme editor) ────────────────────────────────────────────────
   const CSS_MAP = {
@@ -68,6 +69,42 @@ const App = (() => {
       audio.play().catch(() => {}); // ignore autoplay policy errors
     } catch {}
   };
+
+  // ── Presence helpers ──────────────────────────────────────────────────────
+  const isOnline = (id) => _onlineSet.has(Number(id));
+
+  const formatLastSeen = (lastSeenTs) => {
+    if (!lastSeenTs) return 'не заходил';
+    const s = Math.floor(Date.now() / 1000) - lastSeenTs;
+    if (s < 60)      return 'был только что';
+    if (s < 3600)    return `был ${Math.floor(s / 60)} мин назад`;
+    if (s < 86400)   return `был ${Math.floor(s / 3600)} ч назад`;
+    if (s < 604800)  return `был ${Math.floor(s / 86400)} дн назад`;
+    return `был ${new Date(lastSeenTs * 1000).toLocaleDateString('ru')}`;
+  };
+
+  const presenceHtml = (userId, lastSeenTs, wrapClass = '') => {
+    const on = isOnline(userId);
+    return `<span class="status-text ${on ? 'online' : ''}" data-presence-id="${userId}" data-last-seen="${lastSeenTs || 0}">${on ? 'онлайн' : formatLastSeen(lastSeenTs)}</span>`;
+  };
+
+  // Обновить все видимые presence-лейблы
+  const refreshPresenceLabels = () => {
+    document.querySelectorAll('[data-presence-id]').forEach(el => {
+      const id = Number(el.dataset.presenceId);
+      const ts = Number(el.dataset.lastSeen);
+      const on = isOnline(id);
+      el.textContent = on ? 'онлайн' : formatLastSeen(ts);
+      el.className = 'status-text' + (on ? ' online' : '');
+    });
+    // Точки-индикаторы на аватарках
+    document.querySelectorAll('[data-dot-id]').forEach(dot => {
+      const id = Number(dot.dataset.dotId);
+      dot.classList.toggle('online', isOnline(id));
+    });
+  };
+
+  document.addEventListener('presence:update', refreshPresenceLabels);
 
   // ── Screens ────────────────────────────────────────────────────────────────
   const showAuth = () => {
@@ -137,8 +174,26 @@ const App = (() => {
   const connectSocket = (token) => {
     if (_socket) { _socket.disconnect(); _socket = null; }
     _socket = io({ auth: { token } });
-    _socket.on('connect',       () => console.log('🔌 Socket OK'));
+    _socket.on('connect', async () => {
+      console.log('🔌 Socket OK');
+      // Получить актуальный список онлайн при подключении
+      try {
+        const ids = await API.getOnlineUsers();
+        _onlineSet = new Set(ids.map(Number));
+        document.dispatchEvent(new CustomEvent('presence:update'));
+      } catch {}
+    });
     _socket.on('connect_error', (e) => console.warn('Socket:', e.message));
+
+    _socket.on('user:online', (id) => {
+      _onlineSet.add(Number(id));
+      document.dispatchEvent(new CustomEvent('presence:update', { detail: { id: Number(id), online: true } }));
+    });
+
+    _socket.on('user:offline', (id) => {
+      _onlineSet.delete(Number(id));
+      document.dispatchEvent(new CustomEvent('presence:update', { detail: { id: Number(id), online: false } }));
+    });
 
     _socket.on('message:new', (msg) => {
       if (_currentPage === 'messages') MessagesPage.appendMessage(msg);
@@ -336,5 +391,8 @@ const App = (() => {
     playSound,
     toggleUserMenu,
     closeUserMenu,
+    isOnline,
+    formatLastSeen,
+    presenceHtml,
   };
 })();

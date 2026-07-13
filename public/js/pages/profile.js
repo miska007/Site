@@ -71,6 +71,7 @@ const ProfilePage = (() => {
                 <div class="profile-info">
                   <div class="profile-displayname">${escHtml(user.display_name||user.username)}</div>
                   <div class="profile-username">@${user.username}</div>
+                  ${!isMe ? `<div style="margin-top:4px">${App.presenceHtml(user.id, user.last_seen)}</div>` : ''}
                   ${user.bio ? `<div class="profile-bio">${escHtml(user.bio)}</div>` : ''}
                   <div class="profile-stats">
                     <div class="profile-stat"><div class="profile-stat-num">${user.post_count}</div><div class="profile-stat-label">постов</div></div>
@@ -80,7 +81,7 @@ const ProfilePage = (() => {
                 </div>
                 <div class="profile-actions">
                   ${friendBtn}
-                  ${!isMe ? `<button class="btn-icon" onclick="App.nav('messages');setTimeout(()=>MessagesPage.openDialog(${user.id},'${escHtml(user.display_name||user.username)}','${user.avatar||''}'),200)">
+                  ${!isMe ? `<button class="btn-icon" onclick="App.nav('messages');setTimeout(()=>MessagesPage.openDialog(${user.id},'${escHtml(user.display_name||user.username)}','${user.avatar||''}',${user.last_seen||0}),200)">
                     <svg viewBox="0 0 24 24"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
                     Написать
                   </button>` : ''}

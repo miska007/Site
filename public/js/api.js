@@ -91,6 +91,9 @@ const API = (() => {
     adminUploadSound: (type, file) => { const fd = new FormData(); fd.append('sound', file); return upload('POST', `/admin/sounds/${type}`, fd); },
     adminDeleteSound: (type)      => req('DELETE', `/admin/sounds/${type}`),
 
+    // Online presence
+    getOnlineUsers: () => req('GET', '/online'),
+
     // Public settings (sounds, theme vars)
     getPublicSettings: () => fetch('/api/settings').then(r => r.json()).catch(() => ({})),
   };

@@ -43,14 +43,17 @@ const FriendsPage = (() => {
           el.innerHTML = friends.length
             ? friends.map(f => `
               <div class="friend-item">
-                <div class="avatar" onclick="App.navProfile('${f.username}')"><img src="${f.avatar||'/img/default-avatar.svg'}"></div>
+                <div class="avatar-wrap">
+                  <div class="avatar" onclick="App.navProfile('${f.username}')"><img src="${f.avatar||'/img/default-avatar.svg'}"></div>
+                  <span class="status-dot ${App.isOnline(f.id)?'online':''}" data-dot-id="${f.id}"></span>
+                </div>
                 <div class="friend-info">
                   <div class="friend-name" onclick="App.navProfile('${f.username}')" style="cursor:pointer">${escHtml(f.display_name||f.username)}</div>
-                  <div class="friend-username">@${f.username}</div>
+                  <div class="friend-username">@${f.username} &nbsp;${App.presenceHtml(f.id, f.last_seen)}</div>
                 </div>
                 <div class="friend-actions">
                   <button class="btn-icon" title="Написать сообщение"
-                    onclick="App.nav('messages');setTimeout(()=>MessagesPage.openDialog(${f.id},'${escHtml(f.display_name||f.username)}','${f.avatar||''}'),200)">
+                    onclick="App.nav('messages');setTimeout(()=>MessagesPage.openDialog(${f.id},'${escHtml(f.display_name||f.username)}','${f.avatar||''}',${f.last_seen||0}),200)">
                     <svg viewBox="0 0 24 24"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
                   </button>
                   <button class="btn-danger" onclick="FriendsPage.removeFriend(${f.id},'${f.username}')">Удалить</button>
@@ -123,10 +126,13 @@ const FriendsPage = (() => {
           else if (status==='pending')  btn = `<span class="text-muted" style="font-size:.85rem">Заявка отправлена</span>`;
           return `
           <div class="friend-item">
-            <div class="avatar" onclick="App.navProfile('${u.username}')"><img src="${u.avatar||'/img/default-avatar.svg'}"></div>
+            <div class="avatar-wrap">
+              <div class="avatar" onclick="App.navProfile('${u.username}')"><img src="${u.avatar||'/img/default-avatar.svg'}"></div>
+              <span class="status-dot ${App.isOnline(u.id)?'online':''}" data-dot-id="${u.id}"></span>
+            </div>
             <div class="friend-info">
               <div class="friend-name">${escHtml(u.display_name||u.username)}</div>
-              <div class="friend-username">@${u.username}</div>
+              <div class="friend-username">@${u.username} &nbsp;${App.presenceHtml(u.id, u.last_seen)}</div>
             </div>
             <div class="friend-actions">${btn}</div>
           </div>`;
